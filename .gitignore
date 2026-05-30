@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Expo EAS credentials
+credentials.json
+credentials/

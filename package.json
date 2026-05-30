@@ -3,16 +3,33 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "expo": "~56.0.3",
-    "expo-status-bar": "~56.0.4",
-    "react": "19.2.3",
-    "react-native": "0.85.3"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/bottom-tabs": "^7.16.1",
+    "@react-navigation/native": "^7.2.4",
+    "@react-navigation/stack": "^7.9.2",
+    "expo": "~55.0.0",
+    "expo-blur": "~55.0.14",
+    "expo-image-picker": "~55.0.20",
+    "expo-status-bar": "~55.0.6",
+    "firebase": "^12.13.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-reanimated": "4.2.1",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "0.7.4"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "guard:lockfile": "node -e \"const v=process.versions.node.split('.').map(Number); if(v[0]!==20){console.warn('Warning: Active Node version is ' + process.versions.node + ', but EAS builders use 20.19.4.')}\" && npm ci --include=dev --dry-run",
+    "build:android:apk": "npm run guard:lockfile && npx eas-cli build --platform android --profile apk --clear-cache",
+    "build:ios:adhoc": "npm run guard:lockfile && npx eas-cli build --platform ios --profile adhoc --clear-cache"
   },
   "private": true
 }
