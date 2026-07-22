@@ -127,8 +127,8 @@ npm run eject    # Eject from Expo (not recommended)
 
 Feel free to submit issues and enhancement requests!
 
-## License
-
+## License         
+Testing GitHub
 See [LICENSE](LICENSE) file for details.
 
 ## Support
