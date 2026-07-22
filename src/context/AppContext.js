@@ -284,17 +284,23 @@ export function AppProvider({ children }) {
     if (!sale) return;
 
     const product = products.find((p) => p.id === sale.productId);
-    if (!product) return;
-
-    const restoredProduct = {
-      ...product,
-      stockQuantity: product.stockQuantity + sale.quantity,
-    };
+    
+    let restoredProduct = null;
+    let updatedProducts = products;
+    if (product) {
+      restoredProduct = {
+        ...product,
+        stockQuantity: product.stockQuantity + sale.quantity,
+      };
+      updatedProducts = products.map((p) => p.id === sale.productId ? restoredProduct : p);
+    }
 
     // Instantly save locally
-    const updatedProducts = products.map((p) => p.id === sale.productId ? restoredProduct : p);
     const updatedSales = sales.filter((s) => s.saleId !== saleId);
-    await Promise.all([persistProducts(updatedProducts), persistSales(updatedSales)]);
+    await Promise.all([
+      product ? persistProducts(updatedProducts) : Promise.resolve(),
+      persistSales(updatedSales),
+    ]);
 
     // Sync to Firestore in the background ONLY if sync is active
     if (isFirebaseConfigured && db && isSyncActive) {
@@ -303,7 +309,9 @@ export function AppProvider({ children }) {
         try {
           const batch = writeBatch(db);
           batch.delete(doc(db, 'sales', saleId));
-          batch.set(doc(db, 'products', sale.productId), restoredProduct);
+          if (product && restoredProduct) {
+            batch.set(doc(db, 'products', sale.productId), restoredProduct);
+          }
           await batch.commit();
         } catch (e) {
           console.warn('Firestore sale deletion failed in background:', e);

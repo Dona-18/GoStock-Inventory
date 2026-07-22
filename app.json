@@ -6,9 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#3B5BDB"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.internship.dona",
@@ -33,6 +30,16 @@
         "projectId": "9132c8b0-5906-4a25-af37-06708e2cd44c"
       }
     },
-    "owner": "dona_19"
+    "owner": "dona_19",
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3B5BDB"
+        }
+      ],
+      "expo-font"
+    ]
   }
 }
