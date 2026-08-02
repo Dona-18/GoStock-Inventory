@@ -6,10 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
@@ -26,7 +26,6 @@ export default function AddSaleScreen({ navigation }) {
   const { currency, exchangeRate, formatCurrency } = useCurrency();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'cart'
   const [cart, setCart] = useState([]); // [{ productId, productName, quantity, unitPrice, stockQuantity, imageUri }]
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' | 'khqr'
@@ -102,10 +101,6 @@ export default function AddSaleScreen({ navigation }) {
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((i) => i.productId !== productId));
-  };
-
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   }, [cart]);
@@ -177,82 +172,55 @@ export default function AddSaleScreen({ navigation }) {
             </View>
           )}
 
-          {/* Segment View Switcher (Products vs Cart) */}
-          <View style={styles.segmentContainer}>
-            <TouchableOpacity
-              style={[styles.segmentBtn, activeTab === 'products' && styles.segmentBtnActive]}
-              onPress={() => setActiveTab('products')}
-            >
-              <Ionicons
-                name="grid-outline"
-                size={16}
-                color={activeTab === 'products' ? colors.primary : colors.textSecondary}
+          {/* Search input */}
+          <View style={styles.searchBarRow}>
+            <View style={styles.searchInputWrap}>
+              <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={t('search_placeholder')}
+                placeholderTextColor={colors.textMuted}
+                value={searchProduct}
+                onChangeText={setSearchProduct}
               />
-              <Text style={[styles.segmentText, activeTab === 'products' && styles.segmentTextActive]}>
-                {t('pos_view_products')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.segmentBtn, activeTab === 'cart' && styles.segmentBtnActive]}
-              onPress={() => setActiveTab('cart')}
-            >
-              <Ionicons
-                name="cart-outline"
-                size={16}
-                color={activeTab === 'cart' ? colors.primary : colors.textSecondary}
-              />
-              <Text style={[styles.segmentText, activeTab === 'cart' && styles.segmentTextActive]}>
-                {t('pos_view_cart', { count: totalUnits })}
-              </Text>
-              {cart.length > 0 && (
-                <View style={styles.tabBadgeNum}>
-                  <Text style={styles.tabBadgeNumText}>{cart.length}</Text>
-                </View>
+              {searchProduct.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchProduct('')}>
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
           </View>
 
-          {/* ───────────────────────────────────────────────────────────── */}
-          {/* TAB 1: PRODUCTS CATALOG VIEW                                  */}
-          {/* ───────────────────────────────────────────────────────────── */}
-          {activeTab === 'products' && (
-            <View style={{ flex: 1 }}>
-              {/* Search input */}
-              <View style={styles.searchBarRow}>
-                <View style={styles.searchInputWrap}>
-                  <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={t('search_placeholder')}
-                    placeholderTextColor={colors.textMuted}
-                    value={searchProduct}
-                    onChangeText={setSearchProduct}
-                  />
-                  {searchProduct.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchProduct('')}>
-                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+          {/* Single Integrated Scroll View (Products Catalog + Cart + Bill Summary) */}
+          <ScrollView
+            style={styles.mainScroll}
+            contentContainerStyle={{ paddingBottom: 110 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* ───────────────────────────────────────────────────────────── */}
+            {/* SECTION 1: CATALOG PRODUCTS GRID                              */}
+            {/* ───────────────────────────────────────────────────────────── */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{t('pos_view_products')}</Text>
+              <Text style={styles.sectionCountText}>({filteredProducts.length})</Text>
+            </View>
 
-              {/* Product Grid */}
-              <FlatList
-                data={filteredProducts}
-                numColumns={2}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.gridContent}
-                columnWrapperStyle={{ gap: 12 }}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => {
+            <View style={styles.productsGrid}>
+              {filteredProducts.length === 0 ? (
+                <View style={styles.emptyGridBox}>
+                  <Ionicons name="cube-outline" size={32} color={colors.textMuted} />
+                  <Text style={styles.emptyGridText}>{t('no_products_found')}</Text>
+                </View>
+              ) : (
+                filteredProducts.map((item) => {
                   const inCart = cart.find((i) => i.productId === item.id);
                   const inCartQty = inCart ? inCart.quantity : 0;
                   const isOut = item.stockQuantity <= 0;
-                  const isLow = item.stockQuantity <= item.lowStockThreshold;
+                  const isLow = item.stockQuantity > 0 && item.stockQuantity <= (item.minThreshold || 5);
 
                   return (
                     <TouchableOpacity
+                      key={item.id}
                       style={[
                         styles.gridCard,
                         inCartQty > 0 && styles.gridCardInCart,
@@ -293,127 +261,155 @@ export default function AddSaleScreen({ navigation }) {
                       </View>
                     </TouchableOpacity>
                   );
-                }}
-                ListEmptyComponent={
-                  <View style={styles.emptyGridBox}>
-                    <Ionicons name="cube-outline" size={36} color={colors.textMuted} />
-                    <Text style={styles.emptyGridText}>{t('no_products_found')}</Text>
-                  </View>
-                }
-              />
-            </View>
-          )}
-
-          {/* ───────────────────────────────────────────────────────────── */}
-          {/* TAB 2: CART ITEM LIST VIEW                                    */}
-          {/* ───────────────────────────────────────────────────────────── */}
-          {activeTab === 'cart' && (
-            <View style={styles.cartContainer}>
-              <View style={styles.cartHeader}>
-                <Text style={styles.cartTitle}>{t('cart_title')}</Text>
-                {cart.length > 0 && (
-                  <TouchableOpacity onPress={() => setCart([])}>
-                    <Text style={styles.clearCartText}>{t('clear_cart')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {cart.length === 0 ? (
-                <View style={styles.emptyCartBox}>
-                  <View style={styles.emptyCartIcon}>
-                    <Ionicons name="cart-outline" size={40} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.emptyCartTitle}>{t('empty_cart_title')}</Text>
-                  <Text style={styles.emptyCartSubtitle}>{t('empty_cart_subtitle')}</Text>
-                  <TouchableOpacity
-                    style={styles.browseProductsBtn}
-                    onPress={() => setActiveTab('products')}
-                  >
-                    <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.browseProductsBtnText}>{t('pos_view_products')}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <FlatList
-                  data={cart}
-                  keyExtractor={(item) => item.productId}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 20 }}
-                  renderItem={({ item }) => {
-                    const avatarColors = ['#4C6EF5', '#7950F2', '#F76707', '#2F9E44', '#1971C2'];
-                    const avatarBg = avatarColors[(item.productName || 'P').charCodeAt(0) % avatarColors.length];
-
-                    return (
-                      <View style={styles.cartItemCard}>
-                        {item.imageUri ? (
-                          <Image source={{ uri: item.imageUri }} style={styles.itemAvatar} />
-                        ) : (
-                          <View style={[styles.itemAvatar, { backgroundColor: avatarBg }]}>
-                            <Text style={styles.itemAvatarText}>{item.productName.slice(0, 2).toUpperCase()}</Text>
-                          </View>
-                        )}
-
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.itemName} numberOfLines={1}>{item.productName}</Text>
-                          <Text style={styles.itemMeta}>
-                            {formatCurrency(item.unitPrice)} · Max {item.stockQuantity}
-                          </Text>
-                        </View>
-
-                        <View style={styles.qtyBox}>
-                          <TouchableOpacity
-                            style={styles.qtyActionBtn}
-                            onPress={() => updateCartQty(item.productId, -1)}
-                          >
-                            <Ionicons name="remove" size={16} color={colors.primary} />
-                          </TouchableOpacity>
-                          <Text style={styles.qtyText}>{item.quantity}</Text>
-                          <TouchableOpacity
-                            style={styles.qtyActionBtn}
-                            onPress={() => updateCartQty(item.productId, 1)}
-                          >
-                            <Ionicons name="add" size={16} color={colors.primary} />
-                          </TouchableOpacity>
-                        </View>
-
-                        <Text style={styles.itemSubtotal}>
-                          {formatCurrency(item.unitPrice * item.quantity)}
-                        </Text>
-
-                        <TouchableOpacity
-                          style={styles.removeBtn}
-                          onPress={() => removeFromCart(item.productId)}
-                        >
-                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  }}
-                />
+                })
               )}
             </View>
-          )}
+
+            {/* ───────────────────────────────────────────────────────────── */}
+            {/* SECTION 2: CART ITEMS LIST                                    */}
+            {/* ───────────────────────────────────────────────────────────── */}
+            <View style={[styles.posCartHeaderRow, { marginTop: 18 }]}>
+              <Text style={styles.posCartHeaderTitle}>Products</Text>
+              <View style={styles.redPillBadge}>
+                <Text style={styles.redPillBadgeText}>{totalUnits}</Text>
+              </View>
+              {cart.length > 0 && (
+                <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={() => setCart([])}>
+                  <Text style={styles.clearCartText}>{t('clear_cart')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {cart.length === 0 ? (
+              <View style={styles.emptyCartBox}>
+                <Ionicons name="cart-outline" size={32} color={colors.textMuted} />
+                <Text style={styles.emptyCartTitle}>{t('empty_cart_title')}</Text>
+                <Text style={styles.emptyCartSubtitle}>{t('empty_cart_subtitle')}</Text>
+              </View>
+            ) : (
+              <View>
+                {/* Item List Cards */}
+                {cart.map((item) => {
+                  const codeTag = `[${String(item.productId).slice(-6)}]`;
+                  return (
+                    <View key={item.productId} style={styles.posItemCard}>
+                      <View style={styles.posImageSquare}>
+                        {item.imageUri ? (
+                          <Image source={{ uri: item.imageUri }} style={styles.posSquareImg} />
+                        ) : (
+                          <Ionicons name="cube-outline" size={22} color="#38BDF8" />
+                        )}
+                      </View>
+
+                      <View style={styles.posItemDetails}>
+                        <Text style={styles.posItemTitle} numberOfLines={1}>
+                          {item.productName} <Text style={styles.posCodeTag}>{codeTag}</Text>
+                        </Text>
+                        <Text style={styles.posItemPrice}>{formatCurrency(item.unitPrice)}</Text>
+                      </View>
+
+                      <View style={styles.posStepperRow}>
+                        <TouchableOpacity
+                          style={styles.stepperBtn}
+                          onPress={() => updateCartQty(item.productId, -1)}
+                        >
+                          <Ionicons name="remove" size={14} color="#38BDF8" />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperQtyText}>{item.quantity}</Text>
+                        <TouchableOpacity
+                          style={styles.stepperBtn}
+                          onPress={() => updateCartQty(item.productId, 1)}
+                        >
+                          <Ionicons name="add" size={14} color="#38BDF8" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* BILL SUMMARY CARD                                             */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <View style={styles.billSummaryCard}>
+                  <Text style={styles.billSummaryTitle}>Bill Summary</Text>
+
+                  <View style={styles.billRow}>
+                    <Text style={styles.billLabel}>Total Items:</Text>
+                    <Text style={styles.billValue}>{cart.length}({totalUnits})</Text>
+                  </View>
+
+                  <View style={styles.billRow}>
+                    <Text style={styles.billLabel}>Total Amount:</Text>
+                    <Text style={styles.billValue}>{formatCurrency(cartTotal)}</Text>
+                  </View>
+
+                  <View style={styles.billDivider} />
+
+                  <View style={[styles.billRow, { marginTop: 4 }]}>
+                    <Text style={styles.grandTotalText}>Grand Total</Text>
+                    <Text style={styles.grandTotalValText}>{formatCurrency(cartTotal)}</Text>
+                  </View>
+                </View>
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* PAYMENT METHOD SECTION                                        */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <View style={{ marginTop: 16 }}>
+                  <Text style={styles.paymentSectionLabel}>{t('pay_method_label')}</Text>
+                  <View style={styles.paymentChipsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.paymentOptionCard,
+                        paymentMethod === 'cash' && styles.paymentOptionCardActive,
+                      ]}
+                      onPress={() => setPaymentMethod('cash')}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name="cash-outline"
+                        size={18}
+                        color={paymentMethod === 'cash' ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.paymentOptionText,
+                          paymentMethod === 'cash' && styles.paymentOptionTextActive,
+                        ]}
+                      >
+                        {t('pay_method_cash')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.paymentOptionCard,
+                        paymentMethod === 'khqr' && styles.paymentOptionCardActive,
+                      ]}
+                      onPress={() => setPaymentMethod('khqr')}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name="qr-code-outline"
+                        size={18}
+                        color={paymentMethod === 'khqr' ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.paymentOptionText,
+                          paymentMethod === 'khqr' && styles.paymentOptionTextActive,
+                        ]}
+                      >
+                        {t('pay_method_khqr')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
 
           {/* Sticky Bottom Quick Checkout Bar */}
           <View style={styles.footer}>
-            {/* Quick Payment Method Chips */}
-            <View style={styles.paymentMethodRow}>
-              {[
-                { key: 'cash', label: t('pay_method_cash') },
-                { key: 'khqr', label: t('pay_method_khqr') },
-              ].map((pm) => (
-                <TouchableOpacity
-                  key={pm.key}
-                  style={[styles.pmChip, paymentMethod === pm.key && styles.pmChipActive]}
-                  onPress={() => setPaymentMethod(pm.key)}
-                >
-                  <Text style={[styles.pmChipText, paymentMethod === pm.key && styles.pmChipTextActive]}>
-                    {pm.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             <View style={styles.totalRow}>
               <View>
                 <Text style={styles.totalLabel}>{t('total_amount')}</Text>
@@ -450,7 +446,6 @@ export default function AddSaleScreen({ navigation }) {
         onClose={() => {
           setShowInvoice(false);
           setCart([]);
-          navigation.navigate('SalesLog');
         }}
       />
     </SafeAreaView>
@@ -490,52 +485,8 @@ function createStyles(colors) {
       marginHorizontal: 16, marginTop: 10, borderRadius: 12,
     },
     toastText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-    segmentContainer: {
-      flexDirection: 'row',
-      marginHorizontal: 16,
-      marginTop: 10,
-      marginBottom: 6,
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      padding: 4,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    segmentBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      borderRadius: 10,
-      position: 'relative',
-    },
-    segmentBtnActive: {
-      backgroundColor: colors.primaryLight,
-    },
-    segmentText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    segmentTextActive: {
-      color: colors.primary,
-      fontWeight: '800',
-    },
-    tabBadgeNum: {
-      backgroundColor: colors.primary,
-      borderRadius: 10,
-      paddingHorizontal: 6,
-      paddingVertical: 1,
-    },
-    tabBadgeNumText: {
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontWeight: '800',
-    },
     searchBarRow: {
-      paddingHorizontal: 16, paddingTop: 6, paddingBottom: 6,
+      paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6,
     },
     searchInputWrap: {
       flexDirection: 'row', alignItems: 'center',
@@ -543,17 +494,25 @@ function createStyles(colors) {
       borderWidth: 1, borderColor: colors.border,
     },
     searchInput: { flex: 1, fontSize: 14, color: colors.textPrimary },
-    gridContent: { padding: 16, paddingBottom: 20 },
+    mainScroll: { flex: 1, paddingHorizontal: 16, paddingTop: 6 },
+    sectionHeaderRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 8,
+    },
+    sectionTitle: {
+      fontSize: 15, fontWeight: '800', color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: 0.5,
+    },
+    sectionCountText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+    productsGrid: {
+      flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    },
     gridCard: {
-      flex: 1,
+      width: '31.3%',
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 12,
-      borderWidth: 1.5,
+      borderRadius: 12,
+      padding: 8,
+      borderWidth: 1,
       borderColor: colors.border,
       position: 'relative',
-      marginHorizontal: 0,
-      marginBottom: 12,
     },
     gridCardInCart: {
       borderColor: colors.primary,
@@ -564,101 +523,228 @@ function createStyles(colors) {
     },
     gridCardBadge: {
       position: 'absolute',
-      top: 8,
-      right: 8,
+      top: 4,
+      right: 4,
       backgroundColor: colors.primary,
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
+      borderRadius: 8,
+      minWidth: 18,
+      height: 18,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 4,
+      paddingHorizontal: 3,
       zIndex: 2,
     },
-    gridCardBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-    gridImage: { width: '100%', height: 75, borderRadius: 10, marginBottom: 8, resizeMode: 'cover' },
+    gridCardBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+    gridImage: { width: '100%', height: 48, borderRadius: 8, marginBottom: 4, resizeMode: 'cover' },
     gridAvatar: {
-      width: '100%', height: 75, borderRadius: 10,
-      justifyContent: 'center', alignItems: 'center', marginBottom: 8,
+      width: '100%', height: 48, borderRadius: 8,
+      justifyContent: 'center', alignItems: 'center', marginBottom: 4,
     },
-    gridAvatarText: { color: colors.primary, fontWeight: '900', fontSize: 18 },
-    gridTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-    gridPrice: { fontSize: 14, fontWeight: '900', color: colors.primary, marginTop: 2 },
+    gridAvatarText: { color: colors.primary, fontWeight: '900', fontSize: 14 },
+    gridTitle: { fontSize: 11, fontWeight: '700', color: colors.textPrimary },
+    gridPrice: { fontSize: 12, fontWeight: '900', color: colors.primary, marginTop: 1 },
     gridFooterRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginTop: 6,
+      marginTop: 4,
     },
-    gridStock: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-    outOfStockTag: { fontSize: 10, color: colors.danger, fontWeight: '800' },
+    gridStock: { fontSize: 9, color: colors.textMuted, fontWeight: '600' },
+    outOfStockTag: { fontSize: 9, color: colors.danger, fontWeight: '800' },
     plusCircle: {
-      width: 26,
-      height: 26,
-      borderRadius: 8,
+      width: 20,
+      height: 20,
+      borderRadius: 6,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    emptyGridBox: { alignItems: 'center', paddingVertical: 40, gap: 8 },
-    emptyGridText: { fontSize: 14, color: colors.textMuted },
-    cartContainer: { flex: 1, paddingHorizontal: 16, paddingTop: 6 },
-    cartHeader: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    emptyGridBox: { width: '100%', alignItems: 'center', paddingVertical: 20, gap: 4 },
+    emptyGridText: { fontSize: 12, color: colors.textMuted },
+    posCartHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       marginBottom: 10,
     },
-    cartTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: 0.5 },
+    posCartHeaderTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    redPillBadge: {
+      backgroundColor: '#EF4444',
+      borderRadius: 12,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    redPillBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '900',
+    },
     clearCartText: { fontSize: 12, fontWeight: '700', color: colors.danger },
-    emptyCartBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
-    emptyCartIcon: {
-      width: 64, height: 64, borderRadius: 18,
-      backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center',
-      marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    emptyCartBox: {
+      alignItems: 'center',
+      paddingVertical: 20,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 4,
     },
-    emptyCartTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary },
-    emptyCartSubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 4, textAlign: 'center' },
-    browseProductsBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: colors.primary, borderRadius: 12,
-      paddingHorizontal: 18, paddingVertical: 10, marginTop: 16,
+    emptyCartTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginTop: 4 },
+    emptyCartSubtitle: { fontSize: 12, color: colors.textMuted },
+    posItemCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 10,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    browseProductsBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-    cartItemCard: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: colors.card, borderRadius: 16, padding: 12, marginBottom: 8,
-      borderWidth: 1, borderColor: colors.border,
+    posImageSquare: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: '#E0F2FE',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+      overflow: 'hidden',
     },
-    itemAvatar: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-    itemAvatarText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-    itemInfo: { flex: 1, marginRight: 8 },
-    itemName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
-    itemMeta: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-    qtyBox: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: colors.background, borderRadius: 10,
-      borderWidth: 1, borderColor: colors.border, marginRight: 8,
+    posSquareImg: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
     },
-    qtyActionBtn: { width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
-    qtyText: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, paddingHorizontal: 4 },
-    itemSubtotal: { fontSize: 14, fontWeight: '800', color: colors.primary, marginRight: 8 },
-    removeBtn: { padding: 4 },
+    posItemDetails: {
+      flex: 1,
+      marginRight: 8,
+    },
+    posItemTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    posCodeTag: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    posItemPrice: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#6366F1',
+      marginTop: 2,
+    },
+    posStepperRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    stepperBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      backgroundColor: '#E0F2FE',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    stepperQtyText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      minWidth: 14,
+      textAlign: 'center',
+    },
+    billSummaryCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 14,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    billSummaryTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginBottom: 10,
+    },
+    billRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginVertical: 4,
+    },
+    billLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    billValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    billDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 8,
+    },
+    grandTotalText: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: colors.textPrimary,
+    },
+    grandTotalValText: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: colors.textPrimary,
+    },
+    paymentSectionLabel: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    paymentChipsRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    paymentOptionCard: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
+    paymentOptionCardActive: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
+    },
+    paymentOptionText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    paymentOptionTextActive: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
     footer: {
       paddingHorizontal: 16, paddingTop: 10, paddingBottom: 24,
       backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border,
     },
-    paymentMethodRow: {
-      flexDirection: 'row', gap: 8, marginBottom: 10,
-    },
-    pmChip: {
-      flex: 1, paddingVertical: 6, borderRadius: 10,
-      backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
-      alignItems: 'center', justifyContent: 'center',
-    },
-    pmChipActive: {
-      backgroundColor: colors.primaryLight, borderColor: colors.primary,
-    },
-    pmChipText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
-    pmChipTextActive: { color: colors.primary, fontWeight: '800' },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     totalLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
     unitsSummary: { fontSize: 11, color: colors.primary, fontWeight: '700', marginTop: 1 },
@@ -670,6 +756,6 @@ function createStyles(colors) {
       shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
     },
     saveBtnDisabled: { opacity: 0.5 },
-    saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+    saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   });
 }

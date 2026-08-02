@@ -113,7 +113,7 @@ export default function InvoiceModal({ visible, sale, onClose }) {
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <View style={styles.iconCircle}>
-              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+              <Ionicons name="document-text-outline" size={18} color="#000000" />
             </View>
             <Text style={styles.headerTitle}>{t('invoice_title')}</Text>
           </View>
@@ -127,19 +127,16 @@ export default function InvoiceModal({ visible, sale, onClose }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Printable Ticket Receipt Card with Notches */}
+          {/* Ticket Receipt Card with Notches */}
           <View style={styles.receiptCard}>
             <View style={styles.notchLeft} />
             <View style={styles.notchRight} />
 
-            {/* Gradient Top Banner Accent */}
+            {/* Black Top Banner Accent */}
             <View style={styles.topAccentBar} />
 
             {/* Store Branding Header */}
             <View style={styles.storeHeader}>
-              <View style={styles.storeLogoBadge}>
-                <Ionicons name="storefront" size={26} color="#FFFFFF" />
-              </View>
               <Text style={styles.storeName}>{storeName}</Text>
               {storePhone ? (
                 <Text style={styles.storeMeta}>📞 {storePhone}</Text>
@@ -149,7 +146,7 @@ export default function InvoiceModal({ visible, sale, onClose }) {
               ) : null}
             </View>
 
-            <View style={styles.dashedLine} />
+            <View style={styles.dividerLine} />
 
             {/* Meta Grid Information */}
             <View style={styles.metaGrid}>
@@ -159,70 +156,76 @@ export default function InvoiceModal({ visible, sale, onClose }) {
               </View>
               <View style={[styles.metaItem, { alignItems: 'flex-end' }]}>
                 <Text style={styles.metaLabel}>{t('invoice_date')}</Text>
-                <Text style={styles.metaValue}>{formattedDate}</Text>
-                <Text style={styles.metaSubValue}>{formattedTime}</Text>
+                <Text style={styles.metaValue}>{formattedDate} {formattedTime}</Text>
               </View>
             </View>
 
             <View style={styles.metaGrid}>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>{t('pay_method_label')}</Text>
-                <View style={styles.methodBadge}>
-                  <Ionicons
-                    name={sale.paymentMethod === 'khqr' ? 'qr-code-outline' : 'cash-outline'}
-                    size={12}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.methodBadgeText}>
-                    {sale.paymentMethod === 'khqr' ? t('pay_method_khqr') : t('pay_method_cash')}
-                  </Text>
-                </View>
+                <Text style={styles.metaValueBold}>
+                  {sale.paymentMethod === 'khqr' ? t('pay_method_khqr') : t('pay_method_cash')}
+                </Text>
               </View>
               <View style={[styles.metaItem, { alignItems: 'flex-end' }]}>
                 <Text style={styles.metaLabel}>Status</Text>
-                <View style={styles.statusPaidBadge}>
-                  <Ionicons name="checkmark-circle" size={13} color="#166534" />
-                  <Text style={styles.statusPaidText}>{t('invoice_status_paid')}</Text>
-                </View>
+                <Text style={styles.statusPaidText}>✓ {t('invoice_status_paid')}</Text>
               </View>
             </View>
 
-            <View style={styles.dashedLine} />
+            <View style={styles.dividerLine} />
 
-            {/* Item Details */}
-            <Text style={styles.sectionHeader}>{t('invoice_item')} ({itemsList.length})</Text>
-            <View style={styles.itemCard}>
+            {/* Item Table matching User Template */}
+            <View style={styles.tableContainer}>
+              {/* Black Table Header Row */}
+              <View style={styles.tableHeaderRow}>
+                <View style={[styles.thBox, { flex: 2.2, alignItems: 'center' }]}>
+                  <Text style={styles.thText}>{t('tbl_name_of_items')}</Text>
+                </View>
+                <View style={[styles.thBox, { flex: 1, alignItems: 'center' }]}>
+                  <Text style={styles.thText}>{t('tbl_quantity')}</Text>
+                </View>
+                <View style={[styles.thBox, { flex: 1.3, alignItems: 'center' }]}>
+                  <Text style={styles.thText}>{t('tbl_price_per_unit')}</Text>
+                </View>
+                <View style={[styles.thBox, { flex: 1.3, alignItems: 'center' }]}>
+                  <Text style={styles.thText}>{t('tbl_total_price')}</Text>
+                </View>
+              </View>
+
+              {/* Table Rows */}
               {itemsList.map((item, idx) => (
-                <View key={idx}>
-                  <View style={styles.itemRow}>
-                    <View style={styles.itemMainInfo}>
-                      <Text style={styles.itemName}>{item.productName}</Text>
-                      <Text style={styles.itemQtyPrice}>
-                        {item.quantity} × {formatCurrency(item.unitPrice)}
-                      </Text>
-                    </View>
-                    <Text style={styles.itemTotalVal}>{formatCurrency(item.totalPrice)}</Text>
+                <View key={idx} style={styles.tableBodyRow}>
+                  <View style={{ flex: 2.2 }}>
+                    <Text style={styles.itemNameText}>{item.productName}</Text>
                   </View>
-                  {idx < itemsList.length - 1 && (
-                    <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: 8 }} />
-                  )}
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={styles.itemQtyText}>{item.quantity}</Text>
+                  </View>
+                  <View style={{ flex: 1.3, alignItems: 'flex-end' }}>
+                    <Text style={styles.itemUnitPriceText}>{formatCurrency(item.unitPrice)}</Text>
+                  </View>
+                  <View style={{ flex: 1.3, alignItems: 'flex-end' }}>
+                    <Text style={styles.itemTotalPriceText}>{formatCurrency(item.totalPrice)}</Text>
+                  </View>
                 </View>
               ))}
             </View>
 
-            {/* Price Summary Box */}
-            <View style={styles.summaryBox}>
+            <View style={styles.dividerLine} />
+
+            {/* Price Summary Breakdown (Right-Aligned) */}
+            <View style={styles.summaryContainer}>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t('invoice_subtotal')}</Text>
+                <Text style={styles.summaryLabel}>{t('tbl_subtotal')}</Text>
                 <Text style={styles.summaryVal}>{mainTotal}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Tax / VAT (0%)</Text>
-                <Text style={[styles.summaryVal, { color: colors.success }]}>$0.00</Text>
+                <Text style={styles.summaryLabel}>{t('tbl_tax')}</Text>
+                <Text style={styles.summaryVal}>$0.00</Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <View style={[styles.summaryRow, { marginTop: 4 }]}>
-                <Text style={styles.grandTotalLabel}>{t('invoice_total')}</Text>
+              <View style={[styles.summaryRow, { marginTop: 6 }]}>
+                <Text style={styles.grandTotalLabel}>{t('tbl_grand_total')}</Text>
                 <Text style={styles.grandTotalVal}>{mainTotal}</Text>
               </View>
               {altTotal ? (
@@ -236,9 +239,6 @@ export default function InvoiceModal({ visible, sale, onClose }) {
             <View style={styles.receiptFooter}>
               <Text style={styles.footerNote}>{storeNote}</Text>
               <Text style={styles.appTagline}>GoStock POS Inventory — Digital Receipt</Text>
-              <View style={styles.barcodeBox}>
-                <Text style={styles.barcodeText}>||||| | |||| ||| |||| | |||</Text>
-              </View>
             </View>
           </View>
         </ScrollView>
@@ -251,11 +251,13 @@ export default function InvoiceModal({ visible, sale, onClose }) {
             disabled={activeAction !== null}
           >
             {activeAction === 'pdf' ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <Ionicons name="download-outline" size={20} color="#FFFFFF" />
+              <>
+                <Ionicons name="download-outline" size={18} color="#FFF" />
+                <Text style={styles.downloadPdfText}>{t('download_pdf')}</Text>
+              </>
             )}
-            <Text style={styles.downloadPdfText}>{t('download_pdf')}</Text>
           </TouchableOpacity>
 
           <View style={styles.secondaryBtnRow}>
@@ -265,11 +267,13 @@ export default function InvoiceModal({ visible, sale, onClose }) {
               disabled={activeAction !== null}
             >
               {activeAction === 'print' ? (
-                <ActivityIndicator color={colors.primary} size="small" />
+                <ActivityIndicator color="#000" size="small" />
               ) : (
-                <Ionicons name="print-outline" size={18} color={colors.primary} />
+                <>
+                  <Ionicons name="print-outline" size={16} color="#000000" />
+                  <Text style={styles.secondaryBtnText}>{t('print_invoice')}</Text>
+                </>
               )}
-              <Text style={styles.secondaryBtnText}>{t('print_invoice')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -278,11 +282,13 @@ export default function InvoiceModal({ visible, sale, onClose }) {
               disabled={activeAction !== null}
             >
               {activeAction === 'share' ? (
-                <ActivityIndicator color={colors.primary} size="small" />
+                <ActivityIndicator color="#000" size="small" />
               ) : (
-                <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                <>
+                  <Ionicons name="share-social-outline" size={16} color="#000000" />
+                  <Text style={styles.secondaryBtnText}>{t('share_invoice')}</Text>
+                </>
               )}
-              <Text style={styles.secondaryBtnText}>{t('share_invoice')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -299,7 +305,7 @@ function createStyles(colors) {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: '#F3F4F6',
     },
     header: {
       flexDirection: 'row',
@@ -307,33 +313,33 @@ function createStyles(colors) {
       alignItems: 'center',
       paddingHorizontal: 20,
       paddingVertical: 14,
-      backgroundColor: colors.card,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: '#E5E7EB',
     },
     headerTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
     },
     iconCircle: {
       width: 32,
       height: 32,
       borderRadius: 10,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: '#F3F4F6',
       justifyContent: 'center',
       alignItems: 'center',
     },
     headerTitle: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#000000',
     },
     closeBtn: {
-      width: 34,
-      height: 34,
+      width: 32,
+      height: 32,
       borderRadius: 10,
-      backgroundColor: colors.background,
+      backgroundColor: '#F3F4F6',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -341,25 +347,42 @@ function createStyles(colors) {
       flex: 1,
     },
     scrollContent: {
-      padding: 20,
-      paddingBottom: 40,
-      alignItems: 'center',
+      padding: 16,
+      paddingBottom: 30,
     },
     receiptCard: {
-      width: '100%',
-      maxWidth: 400,
-      backgroundColor: colors.card,
-      borderRadius: 22,
-      padding: 24,
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
-      elevation: 6,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      padding: 20,
       position: 'relative',
       overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+    notchLeft: {
+      position: 'absolute',
+      left: -12,
+      top: '48%',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#F3F4F6',
+      zIndex: 10,
+    },
+    notchRight: {
+      position: 'absolute',
+      right: -12,
+      top: '48%',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#F3F4F6',
+      zIndex: 10,
     },
     topAccentBar: {
       position: 'absolute',
@@ -367,74 +390,34 @@ function createStyles(colors) {
       left: 0,
       right: 0,
       height: 5,
-      backgroundColor: colors.primary,
-    },
-    notchLeft: {
-      position: 'absolute',
-      left: -12,
-      top: '42%',
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.border,
-      zIndex: 2,
-    },
-    notchRight: {
-      position: 'absolute',
-      right: -12,
-      top: '42%',
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.border,
-      zIndex: 2,
+      backgroundColor: '#000000',
     },
     storeHeader: {
       alignItems: 'center',
-      paddingTop: 8,
+      paddingTop: 10,
       paddingBottom: 14,
     },
-    storeLogoBadge: {
-      width: 52,
-      height: 52,
-      borderRadius: 16,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 10,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 8,
-      elevation: 4,
-    },
     storeName: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '900',
-      color: colors.textPrimary,
+      color: '#000000',
       textAlign: 'center',
       letterSpacing: -0.3,
     },
     storeMeta: {
       fontSize: 12,
-      color: colors.textSecondary,
+      color: '#4B5563',
       marginTop: 2,
-      textAlign: 'center',
     },
-    dashedLine: {
+    dividerLine: {
       height: 1,
-      borderWidth: 0.8,
-      borderColor: colors.border,
-      borderStyle: 'dashed',
-      marginVertical: 14,
+      backgroundColor: '#E5E7EB',
+      marginVertical: 12,
     },
     metaGrid: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
       marginVertical: 4,
     },
     metaItem: {
@@ -442,162 +425,146 @@ function createStyles(colors) {
     },
     metaLabel: {
       fontSize: 11,
-      color: colors.textMuted,
+      color: '#6B7280',
       fontWeight: '600',
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
     },
     receiptNoCode: {
       fontSize: 13,
       fontWeight: '800',
-      color: colors.primary,
+      color: '#000000',
       marginTop: 2,
       fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     },
     metaValue: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: '#000000',
       marginTop: 2,
     },
-    metaSubValue: {
-      fontSize: 11,
-      color: colors.textSecondary,
-    },
-    methodBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: colors.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-      alignSelf: 'flex-start',
-      marginTop: 4,
-    },
-    methodBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.primary,
-    },
-    statusPaidBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: '#DCFCE7',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-      marginTop: 4,
+    metaValueBold: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: '#000000',
+      marginTop: 2,
     },
     statusPaidText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '800',
-      color: '#166534',
+      color: '#000000',
+      marginTop: 2,
     },
-    sectionHeader: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
+    tableContainer: {
+      marginTop: 8,
       marginBottom: 8,
     },
-    itemCard: {
-      backgroundColor: colors.background,
-      borderRadius: 14,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      marginBottom: 12,
-    },
-    itemRow: {
+    tableHeaderRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      gap: 4,
+      marginBottom: 8,
     },
-    itemMainInfo: {
-      flex: 1,
-      marginRight: 12,
+    thBox: {
+      backgroundColor: '#000000',
+      paddingVertical: 8,
+      paddingHorizontal: 6,
+      borderRadius: 4,
+      justifyContent: 'center',
     },
-    itemName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    itemQtyPrice: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      marginTop: 3,
-    },
-    itemTotalVal: {
-      fontSize: 16,
+    thText: {
+      color: '#FFFFFF',
+      fontSize: 10,
       fontWeight: '800',
-      color: colors.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
     },
-    summaryBox: {
-      backgroundColor: colors.primaryLight,
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: 'rgba(59, 130, 246, 0.15)',
+    tableBodyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F3F4F6',
+    },
+    itemNameText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#000000',
+    },
+    itemQtyText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#111827',
+    },
+    itemUnitPriceText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#111827',
+    },
+    itemTotalPriceText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#000000',
+    },
+    summaryContainer: {
+      width: '70%',
+      alignSelf: 'flex-end',
+      paddingTop: 8,
     },
     summaryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginVertical: 2,
+      paddingVertical: 3,
     },
     summaryLabel: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      fontWeight: '600',
+      fontSize: 13,
+      color: '#4B5563',
+      fontWeight: '500',
     },
     summaryVal: {
       fontSize: 13,
-      fontWeight: '700',
-      color: colors.textPrimary,
+      fontWeight: '600',
+      color: '#000000',
     },
-    summaryDivider: {
-      height: 1,
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-      marginVertical: 8,
+    summaryValBold: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#000000',
     },
     grandTotalLabel: {
       fontSize: 15,
-      fontWeight: '800',
-      color: colors.primary,
+      fontWeight: '900',
+      color: '#000000',
     },
     grandTotalVal: {
-      fontSize: 22,
+      fontSize: 17,
       fontWeight: '900',
-      color: colors.primary,
+      color: '#000000',
     },
     altTotalText: {
       fontSize: 12,
-      color: colors.textSecondary,
+      color: '#4B5563',
       textAlign: 'right',
       marginTop: 4,
       fontWeight: '600',
     },
     receiptFooter: {
       alignItems: 'center',
-      marginTop: 18,
-      paddingTop: 12,
+      marginTop: 20,
+      paddingTop: 14,
       borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
+      borderTopColor: '#E5E7EB',
     },
     footerNote: {
       fontSize: 12,
       fontStyle: 'italic',
-      color: colors.textPrimary,
+      color: '#000000',
       fontWeight: '600',
       textAlign: 'center',
-      lineHeight: 18,
     },
     appTagline: {
       fontSize: 10,
-      color: colors.textMuted,
+      color: '#6B7280',
       marginTop: 4,
     },
     barcodeBox: {
@@ -607,15 +574,15 @@ function createStyles(colors) {
       fontSize: 13,
       fontWeight: 'bold',
       letterSpacing: 4,
-      color: colors.textMuted,
+      color: '#000000',
     },
     actionsFooter: {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: 20,
-      backgroundColor: colors.card,
+      backgroundColor: '#FFFFFF',
       borderTopWidth: 1,
-      borderTopColor: colors.border,
+      borderTopColor: '#E5E7EB',
       gap: 10,
     },
     actionBtn: {
@@ -627,12 +594,7 @@ function createStyles(colors) {
       gap: 8,
     },
     downloadPdfBtn: {
-      backgroundColor: colors.primary,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-      elevation: 5,
+      backgroundColor: '#000000',
     },
     downloadPdfText: {
       color: '#FFFFFF',
@@ -644,12 +606,12 @@ function createStyles(colors) {
       gap: 10,
     },
     secondaryBtn: {
-      backgroundColor: colors.primaryLight,
-      borderWidth: 1.5,
-      borderColor: colors.border,
+      backgroundColor: '#F3F4F6',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
     },
     secondaryBtnText: {
-      color: colors.primary,
+      color: '#000000',
       fontSize: 14,
       fontWeight: '700',
     },
@@ -661,7 +623,7 @@ function createStyles(colors) {
     doneBtnText: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.textSecondary,
+      color: '#4B5563',
     },
   });
 }

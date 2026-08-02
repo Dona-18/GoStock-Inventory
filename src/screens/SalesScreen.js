@@ -309,17 +309,6 @@ export default function SalesScreen({ navigation, route }) {
 
                   <View style={styles.invActionRow}>
                     <TouchableOpacity
-                      style={styles.actionPillBtn}
-                      onPress={() => {
-                        setShowInvoiceHistory(false);
-                        setInvoiceSale(item);
-                      }}
-                    >
-                      <Ionicons name="eye-outline" size={14} color={colors.primary} />
-                      <Text style={styles.actionPillText}>{t('view_invoice')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
                       style={[styles.actionPillBtn, { backgroundColor: colors.background }]}
                       onPress={() => {
                         downloadPDFAsync({

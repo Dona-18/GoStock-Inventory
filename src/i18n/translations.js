@@ -150,6 +150,15 @@ export const translations = {
     invoice_history_title: 'Invoice History',
     search_invoice_placeholder: 'Search Receipt #, Product...',
     no_invoices_found: 'No invoice receipts found.',
+    tbl_name_of_items: 'NAME OF ITEMS',
+    tbl_quantity: 'QUANTITY',
+    tbl_price_per_unit: 'PRICE PER UNIT',
+    tbl_total_price: 'TOTAL PRICE',
+    tbl_subtotal: 'Subtotal',
+    tbl_discount: 'Discount',
+    tbl_tax: 'Tax',
+    tbl_grand_total: 'Grand Total',
+    tbl_amount_paid: 'Amount Paid',
 
     // Alerts Screen
     stock_alerts_title: 'Stock Alerts',
@@ -389,6 +398,15 @@ export const translations = {
     invoice_history_title: 'ប្រវត្តិវិក្កយបត្រ',
     search_invoice_placeholder: 'ស្វែងរកតាមលេខវិក្កយបត្រ ឬទំនិញ...',
     no_invoices_found: 'រកមិនឃើញប្រវត្តិវិក្កយបត្រទេ។',
+    tbl_name_of_items: 'ឈ្មោះទំនិញ',
+    tbl_quantity: 'ចំនួន',
+    tbl_price_per_unit: 'តម្លៃរាយ',
+    tbl_total_price: 'តម្លៃសរុប',
+    tbl_subtotal: 'សរុបរង',
+    tbl_discount: 'បញ្ចុះតម្លៃ',
+    tbl_tax: 'ពន្ធ',
+    tbl_grand_total: 'សរុបរួម',
+    tbl_amount_paid: 'ប្រាក់បានបង់',
 
     // Alerts Screen
     stock_alerts_title: 'ការព្រមានស្តុក',
