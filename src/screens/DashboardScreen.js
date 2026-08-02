@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import StatCard from '../components/StatCard';
 import { todayKey, formatTime } from '../utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import FadeInView from '../components/FadeInView';
+import InvoiceModal from '../components/InvoiceModal';
 
 export default function DashboardScreen({ navigation }) {
   const { products, sales, lowStockProducts } = useApp();
@@ -23,6 +24,8 @@ export default function DashboardScreen({ navigation }) {
   const { t, locale } = useLanguage();
   const { formatCurrency } = useCurrency();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const [selectedInvoiceSale, setSelectedInvoiceSale] = useState(null);
 
   const todayStats = useMemo(() => {
     const today = todayKey();
@@ -93,7 +96,7 @@ export default function DashboardScreen({ navigation }) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Sales', { screen: 'SalesList', params: { openAddSale: true } })}
+            onPress={() => navigation.navigate('RecordSale')}
           >
             <Ionicons name="add-circle-outline" size={22} color="#FFF" />
             <Text style={styles.actionBtnText}>{t('record_sale_btn')}</Text>
@@ -133,7 +136,7 @@ export default function DashboardScreen({ navigation }) {
         {/* Recent Transactions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeaderTitle}>{t('recent_sales')}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Sales')} style={styles.viewAllPressable}>
+          <TouchableOpacity onPress={() => navigation.navigate('SalesLog')} style={styles.viewAllPressable}>
             <Text style={styles.viewAllLink}>{t('view_all')}</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </TouchableOpacity>
@@ -151,12 +154,17 @@ export default function DashboardScreen({ navigation }) {
               const avatarBg = avatarColors[(sale.productName || 'P').charCodeAt(0) % avatarColors.length];
               const initials = (sale.productName || 'P').slice(0, 2).toUpperCase();
 
-              const product = products.find((p) => p.id === sale.productId);
-              const imageUri = product?.imageUri;
+              const firstProductId = sale.productId || (Array.isArray(sale.items) && sale.items[0]?.productId);
+              const product = products.find((p) => p.id === firstProductId);
+              const imageUri = sale.imageUri || (Array.isArray(sale.items) && sale.items[0]?.imageUri) || product?.imageUri;
 
               return (
                 <View key={sale.saleId}>
-                  <View style={styles.recentItem}>
+                  <TouchableOpacity
+                    style={styles.recentItem}
+                    onPress={() => setSelectedInvoiceSale(sale)}
+                    activeOpacity={0.7}
+                  >
                     {imageUri ? (
                       <Image source={{ uri: imageUri }} style={styles.avatarMini} />
                     ) : (
@@ -171,7 +179,7 @@ export default function DashboardScreen({ navigation }) {
                       </Text>
                     </View>
                     <Text style={styles.recentAmount}>+{formatCurrency(sale.totalPrice)}</Text>
-                  </View>
+                  </TouchableOpacity>
                   {index < recentSales.length - 1 && <View style={styles.divider} />}
                 </View>
               );
@@ -179,6 +187,12 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
         </ScrollView>
+
+        <InvoiceModal
+          visible={!!selectedInvoiceSale}
+          sale={selectedInvoiceSale}
+          onClose={() => setSelectedInvoiceSale(null)}
+        />
       </FadeInView>
     </SafeAreaView>
   );

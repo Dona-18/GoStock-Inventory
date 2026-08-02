@@ -14,26 +14,27 @@ import { useLanguage } from '../context/LanguageContext';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import InventoryNavigator from './InventoryNavigator';
-import SalesNavigator from './SalesNavigator';
+import AddSaleScreen from '../screens/AddSaleScreen';
+import SalesScreen from '../screens/SalesScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
 // ─────────────────────────────────────────────
-// Floating centre Sale button
+// Floating centre POS Sale button
 // ─────────────────────────────────────────────
-function SaleTabButton({ children, onPress, accessibilityState }) {
+function RecordSaleTabButton({ children, onPress, accessibilityState }) {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const focused = accessibilityState?.selected;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       style={styles.saleBtnOuter}
     >
-      {/* Floating rounded-square button */}
       <View
         style={[
           styles.saleBtnInner,
@@ -44,11 +45,10 @@ function SaleTabButton({ children, onPress, accessibilityState }) {
           focused && styles.saleBtnFocused,
         ]}
       >
-        {children}
+        <Ionicons name="cart" size={26} color="#FFFFFF" />
       </View>
-      {/* Sale label sits below the button */}
       <Text style={[styles.saleBtnLabel, { color: focused ? colors.primary : colors.tabBarInactive }]}>
-        {t('tab_sales')}
+        {t('tab_record_sale')}
       </Text>
     </TouchableOpacity>
   );
@@ -88,10 +88,11 @@ export default function MainTabNavigator() {
         },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
-            Home:      focused ? 'home'      : 'home-outline',
-            Inventory: focused ? 'cube'      : 'cube-outline',
-            Reports:   focused ? 'bar-chart' : 'bar-chart-outline',
-            Settings:  focused ? 'settings'  : 'settings-outline',
+            Home:      focused ? 'home'         : 'home-outline',
+            Inventory: focused ? 'cube'         : 'cube-outline',
+            SalesLog:  focused ? 'receipt'      : 'receipt-outline',
+            Reports:   focused ? 'bar-chart'    : 'bar-chart-outline',
+            Settings:  focused ? 'settings'     : 'settings-outline',
           };
           const iconName = icons[route.name] || 'ellipse-outline';
 
@@ -121,28 +122,23 @@ export default function MainTabNavigator() {
         options={{ tabBarLabel: t('tab_inventory') }}
       />
 
-      {/* ── Centre FAB: Sales ── */}
+      {/* ── Centre Floating POS Button ── */}
       <Tab.Screen
-        name="Sales"
-        component={SalesNavigator}
+        name="RecordSale"
+        component={AddSaleScreen}
         options={{
-          tabBarLabel: () => null,   // label handled inside SaleTabButton
-          tabBarButton: (props) => <SaleTabButton {...props} />,
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'bag-handle' : 'bag-handle-outline'}
-              size={26}
-              color="#FFFFFF"
-            />
-          ),
+          tabBarLabel: () => null,
+          tabBarButton: (props) => <RecordSaleTabButton {...props} />,
         }}
       />
 
+      {/* ── Separate Sales Log Tab ── */}
       <Tab.Screen
-        name="Reports"
-        component={ReportsScreen}
-        options={{ tabBarLabel: t('tab_reports') }}
+        name="SalesLog"
+        component={SalesScreen}
+        options={{ tabBarLabel: t('tab_sales_log') }}
       />
+
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
@@ -152,9 +148,6 @@ export default function MainTabNavigator() {
   );
 }
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
 const styles = StyleSheet.create({
   tabIconWrap: {
     position: 'relative',
@@ -175,18 +168,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   tabBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
-
-  // Floating Sale button
   saleBtnOuter: {
     top: -20,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 72,
+    width: 76,
   },
   saleBtnInner: {
     width: 60,
     height: 60,
-    borderRadius: 18,          // rounded square — matches screenshot
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     shadowOffset: { width: 0, height: 6 },

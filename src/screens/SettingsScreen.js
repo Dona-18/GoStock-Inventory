@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FadeInView from '../components/FadeInView';
 
 export default function SettingsScreen() {
-  const { clearAllData, products, sales } = useApp();
+  const { clearAllData, products, sales, storeInfo, updateStoreInfo } = useApp();
   const { colors, isDark, mode, setThemeMode } = useTheme();
   const { t, locale, setLanguage } = useLanguage();
   const { currency, setCurrency, exchangeRate, setExchangeRate } = useCurrency();
@@ -26,6 +26,12 @@ export default function SettingsScreen() {
 
   // Local draft for the exchange rate text input so it feels snappy
   const [rateDraft, setRateDraft] = useState(String(exchangeRate));
+
+  // Local draft for store profile
+  const [nameDraft, setNameDraft] = useState(storeInfo?.name || '');
+  const [phoneDraft, setPhoneDraft] = useState(storeInfo?.phone || '');
+  const [addressDraft, setAddressDraft] = useState(storeInfo?.address || '');
+  const [noteDraft, setNoteDraft] = useState(storeInfo?.note || '');
 
   const handleClearData = () => {
     Alert.alert(
@@ -233,6 +239,53 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Store Profile & Receipt */}
+        <Text style={styles.sectionLabel}>{t('section_store_info')}</Text>
+        <View style={styles.card}>
+          <View style={{ padding: 16 }}>
+            <Text style={styles.inputLabel}>{t('store_name_label')}</Text>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              onBlur={() => updateStoreInfo({ name: nameDraft })}
+              placeholder={t('default_store_name')}
+              placeholderTextColor={colors.textMuted}
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('store_phone_label')}</Text>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={phoneDraft}
+              onChangeText={setPhoneDraft}
+              onBlur={() => updateStoreInfo({ phone: phoneDraft })}
+              placeholder={t('default_store_phone')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('store_address_label')}</Text>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={addressDraft}
+              onChangeText={setAddressDraft}
+              onBlur={() => updateStoreInfo({ address: addressDraft })}
+              placeholder={t('default_store_address')}
+              placeholderTextColor={colors.textMuted}
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('store_note_label')}</Text>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              onBlur={() => updateStoreInfo({ note: noteDraft })}
+              placeholder={t('default_store_note')}
+              placeholderTextColor={colors.textMuted}
+            />
+          </View>
+        </View>
+
         {/* Danger Zone */}
         <Text style={styles.sectionLabel}>{t('section_data_mgmt')}</Text>
         <View style={styles.card}>
@@ -342,6 +395,13 @@ function createStyles(colors) {
     },
     exchangeRateLive: {
       marginTop: 8, fontSize: 12, color: colors.primary, fontWeight: '700', textAlign: 'right',
+    },
+    inputLabel: {
+      fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4,
+    },
+    input: {
+      height: 42, borderWidth: 1.5, borderRadius: 10,
+      paddingHorizontal: 12, fontSize: 14, fontWeight: '500',
     },
   });
 }

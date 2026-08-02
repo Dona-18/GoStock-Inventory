@@ -5,9 +5,17 @@ import { db, isFirebaseConfigured } from '../utils/firebase';
 
 const AppContext = createContext(null);
 
+const DEFAULT_STORE_INFO = {
+  name: 'GoStock Store',
+  phone: '+855 12 345 678',
+  address: 'Phnom Penh, Cambodia',
+  note: 'Thank you for shopping with us!',
+};
+
 export function AppProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
+  const [storeInfo, setStoreInfo] = useState(DEFAULT_STORE_INFO);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncActive, setIsSyncActive] = useState(false); // Active only when Firestore is successfully pinged
 
@@ -15,9 +23,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const [rawProducts, rawSales] = await Promise.all([
+        const [rawProducts, rawSales, rawStore] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.PRODUCTS),
           AsyncStorage.getItem(STORAGE_KEYS.SALES),
+          AsyncStorage.getItem(STORAGE_KEYS.STORE_INFO),
         ]);
         
         let localProds = [];
@@ -30,6 +39,11 @@ export function AppProvider({ children }) {
         if (rawSales) {
           localSales = JSON.parse(rawSales);
           setSales(localSales);
+        }
+        if (rawStore) {
+          try {
+            setStoreInfo({ ...DEFAULT_STORE_INFO, ...JSON.parse(rawStore) });
+          } catch (_) {}
         }
 
         // Migrate local offline data to the cloud if connecting to an empty Firebase database
@@ -225,40 +239,74 @@ export function AppProvider({ children }) {
   }, [products, persistProducts, isSyncActive]);
 
   // ─── 5. Sales CRUD mutations ───────────────────────────────────────────────
-  const recordSale = useCallback(async ({ productId, quantity }) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return { success: false, error: 'Product not found.' };
-
-    const qty = parseInt(quantity, 10);
-    if (isNaN(qty) || qty <= 0) return { success: false, error: 'Quantity must be a positive number.' };
-    if (qty > product.stockQuantity) {
-      return {
-        success: false,
-        error: `Insufficient stock. Only ${product.stockQuantity} available.`,
-      };
+  const recordSale = useCallback(async (saleInput) => {
+    let rawItems = [];
+    if (Array.isArray(saleInput.items) && saleInput.items.length > 0) {
+      rawItems = saleInput.items;
+    } else if (saleInput.productId) {
+      rawItems = [{ productId: saleInput.productId, quantity: saleInput.quantity }];
+    } else {
+      return { success: false, error: 'No items provided for sale.' };
     }
+
+    const formattedItems = [];
+    const updatedProductsMap = new Map(products.map((p) => [p.id, { ...p }]));
+
+    for (const item of rawItems) {
+      const product = updatedProductsMap.get(item.productId);
+      if (!product) {
+        return { success: false, error: 'Product not found.' };
+      }
+      const qty = parseInt(item.quantity, 10);
+      if (isNaN(qty) || qty <= 0) {
+        return { success: false, error: `Invalid quantity for ${product.name}.` };
+      }
+      if (qty > product.stockQuantity) {
+        return {
+          success: false,
+          error: `Insufficient stock for "${product.name}". Only ${product.stockQuantity} available.`,
+        };
+      }
+
+      product.stockQuantity -= qty;
+      updatedProductsMap.set(item.productId, product);
+
+      formattedItems.push({
+        productId: product.id,
+        productName: product.name,
+        imageUri: product.imageUri || null,
+        quantity: qty,
+        unitPrice: product.price,
+        totalPrice: product.price * qty,
+      });
+    }
+
+    const totalQuantity = formattedItems.reduce((sum, i) => sum + i.quantity, 0);
+    const totalPrice = formattedItems.reduce((sum, i) => sum + i.totalPrice, 0);
+
+    const displayTitle = formattedItems
+      .map((i) => `${i.productName}${i.quantity > 1 ? ` x${i.quantity}` : ''}`)
+      .join(', ');
 
     const sale = {
       saleId: Date.now().toString(),
-      productId,
-      productName: product.name,
-      quantity: qty,
-      unitPrice: product.price,
-      totalPrice: product.price * qty,
+      items: formattedItems,
+      productId: formattedItems[0].productId,
+      productName: displayTitle,
+      imageUri: formattedItems[0].imageUri || null,
+      paymentMethod: saleInput.paymentMethod || 'cash',
+      quantity: totalQuantity,
+      unitPrice: formattedItems[0].unitPrice,
+      totalPrice,
       createdAt: new Date().toISOString(),
     };
 
-    const updatedProduct = {
-      ...product,
-      stockQuantity: product.stockQuantity - qty,
-    };
+    const updatedProductsList = Array.from(updatedProductsMap.values());
+    const updatedSalesList = [sale, ...sales];
 
-    // Instantly save locally
-    const updatedProducts = products.map((p) => p.id === productId ? updatedProduct : p);
-    const updatedSales = [sale, ...sales];
     await Promise.all([
-      persistProducts(updatedProducts),
-      persistSales(updatedSales),
+      persistProducts(updatedProductsList),
+      persistSales(updatedSalesList),
     ]);
 
     // Sync to Firestore in the background ONLY if sync is active
@@ -268,7 +316,9 @@ export function AppProvider({ children }) {
         try {
           const batch = writeBatch(db);
           batch.set(doc(db, 'sales', sale.saleId), sale);
-          batch.set(doc(db, 'products', productId), updatedProduct);
+          updatedProductsList.forEach((prod) => {
+            batch.set(doc(db, 'products', prod.id), prod);
+          });
           await batch.commit();
         } catch (e) {
           console.warn('Firestore sale record failed in background:', e);
@@ -283,23 +333,25 @@ export function AppProvider({ children }) {
     const sale = sales.find((s) => s.saleId === saleId);
     if (!sale) return;
 
-    const product = products.find((p) => p.id === sale.productId);
-    
-    let restoredProduct = null;
-    let updatedProducts = products;
-    if (product) {
-      restoredProduct = {
-        ...product,
-        stockQuantity: product.stockQuantity + sale.quantity,
-      };
-      updatedProducts = products.map((p) => p.id === sale.productId ? restoredProduct : p);
-    }
+    const updatedProductsMap = new Map(products.map((p) => [p.id, { ...p }]));
+    const saleItems = Array.isArray(sale.items) && sale.items.length > 0
+      ? sale.items
+      : [{ productId: sale.productId, quantity: sale.quantity }];
 
-    // Instantly save locally
-    const updatedSales = sales.filter((s) => s.saleId !== saleId);
+    saleItems.forEach((item) => {
+      if (item.productId && updatedProductsMap.has(item.productId)) {
+        const prod = updatedProductsMap.get(item.productId);
+        prod.stockQuantity += item.quantity;
+        updatedProductsMap.set(item.productId, prod);
+      }
+    });
+
+    const updatedProductsList = Array.from(updatedProductsMap.values());
+    const updatedSalesList = sales.filter((s) => s.saleId !== saleId);
+
     await Promise.all([
-      product ? persistProducts(updatedProducts) : Promise.resolve(),
-      persistSales(updatedSales),
+      persistProducts(updatedProductsList),
+      persistSales(updatedSalesList),
     ]);
 
     // Sync to Firestore in the background ONLY if sync is active
@@ -309,9 +361,9 @@ export function AppProvider({ children }) {
         try {
           const batch = writeBatch(db);
           batch.delete(doc(db, 'sales', saleId));
-          if (product && restoredProduct) {
-            batch.set(doc(db, 'products', sale.productId), restoredProduct);
-          }
+          updatedProductsList.forEach((prod) => {
+            batch.set(doc(db, 'products', prod.id), prod);
+          });
           await batch.commit();
         } catch (e) {
           console.warn('Firestore sale deletion failed in background:', e);
@@ -355,6 +407,12 @@ export function AppProvider({ children }) {
     setSales([]);
   }, [products, sales]);
 
+  const updateStoreInfo = useCallback(async (newInfo) => {
+    const updated = { ...storeInfo, ...newInfo };
+    setStoreInfo(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.STORE_INFO, JSON.stringify(updated));
+  }, [storeInfo]);
+
   // ─── 7. Derived state ──────────────────────────────────────────────────────
   const lowStockProducts = products.filter(
     (p) => p.stockQuantity <= p.lowStockThreshold
@@ -365,6 +423,8 @@ export function AppProvider({ children }) {
       value={{
         products,
         sales,
+        storeInfo,
+        updateStoreInfo,
         isLoading,
         lowStockProducts,
         addProduct,
