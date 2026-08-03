@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -33,12 +34,17 @@ if (isFirebaseConfigured) {
       app = getApps()[0];
     }
 
-    // Initialize Firestore with robust local-first caching
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-    });
+    // Initialize Firestore. persistentLocalCache relies on IndexedDB, which only
+    // exists on web — on iOS/Android it makes every Firestore call fail with
+    // "unimplemented", so native uses the default cache (offline copies of
+    // products/sales are already kept in AsyncStorage by AppContext).
+    db = Platform.OS === 'web'
+      ? initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        })
+      : initializeFirestore(app, {});
 
     auth = getAuth(app);
   } catch (e) {
