@@ -54,10 +54,8 @@ export function AppProvider({ children }) {
             // Ping Firestore. If this succeeds, the database exists and we are online!
             const prodSnap = await getDocs(collection(db, 'products'));
             setIsSyncActive(true); // Enable live synchronization listeners
-            console.log('Firebase Firestore connection established successfully!');
 
             if (prodSnap.empty && localProds.length > 0) {
-              console.log('Migrating local offline products to Firestore...');
               const batch = writeBatch(db);
               localProds.forEach((p) => {
                 batch.set(doc(db, 'products', p.id), p);
@@ -68,7 +66,6 @@ export function AppProvider({ children }) {
             // Migrate Sales
             const salesSnap = await getDocs(collection(db, 'sales'));
             if (salesSnap.empty && localSales.length > 0) {
-              console.log('Migrating local offline sales to Firestore...');
               const batch = writeBatch(db);
               localSales.forEach((s) => {
                 batch.set(doc(db, 'sales', s.saleId), s);
@@ -76,7 +73,6 @@ export function AppProvider({ children }) {
               await batch.commit();
             }
           } catch (syncErr) {
-            console.log('Firestore DB not created yet or offline. Running in safe local-first mode.');
             setIsSyncActive(false);
           }
         }
@@ -117,8 +113,7 @@ export function AppProvider({ children }) {
         });
         setSales(items);
         AsyncStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(items));
-      }, (err) => {
-        console.log('Firestore index warning. Falling back to local sorting...');
+      }, () => {
         const unsubFallback = onSnapshot(collection(db, 'sales'), (snapshot) => {
           const items = [];
           snapshot.forEach((doc) => {

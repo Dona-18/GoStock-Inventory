@@ -53,8 +53,6 @@ if (isFirebaseConfigured) {
     db = null;
     auth = null;
   }
-} else {
-  console.log("Firebase credentials not configured. GoStock is running in 100% offline-only mode.");
 }
 
 export { app, db, auth };
